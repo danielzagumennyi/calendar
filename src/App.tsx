@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import React, { useState } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import { Grid } from "./components/Grid";
@@ -17,11 +18,30 @@ const Reset = createGlobalStyle`
 
 function App() {
   const [date, setDate] = useState(new Date());
+  const [dates, setDates] = useState([
+    new Date(),
+    dayjs()
+      .set("d", +10)
+      .toDate(),
+  ]);
+  const [range, setRange] = useState<Date[]>([
+    dayjs().year(2024).toDate(),
+    dayjs()
+      .year(2024)
+      .set("d", +10)
+      .toDate(),
+  ]);
 
   return (
     <Root>
       <Reset />
-      <Grid date={date} onDateChange={(v) => setDate(v)} rows={2} columns={3} />
+      <Grid
+        mode={"range"}
+        range={range}
+        onRangeChange={(r) => setRange(r)}
+        rows={2}
+        columns={4}
+      />
     </Root>
   );
 }

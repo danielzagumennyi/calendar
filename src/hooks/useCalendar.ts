@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 
 const daysInMonth = (month?: number) => {
   var now = new Date();
@@ -20,11 +20,8 @@ const getWeekOrder = (day: number) => {
 export type IUseCalendarProps = {
   mode?: IMode;
   date?: Date;
-  range?: {
-    start: Date;
-    end: Date;
-  };
   dates?: Date[];
+  range?: Date[];
   showMonth?: number;
   showYear?: number;
 };
@@ -39,11 +36,15 @@ export type IDay = {
   isWeekend: boolean;
   currentMonth: boolean;
   currentYear: boolean;
-  isCurrent: boolean;
+  isActive: boolean;
+  isBetween: boolean;
 };
 
 type IGetMonthDays = {
+  mode?: IMode;
   date?: Date;
+  dates?: Date[];
+  range?: Date[];
   year: number;
   month: number;
   weekends: number[];
@@ -62,10 +63,41 @@ const getMonthDays = (props: IGetMonthDays): IDay[] => {
     endDate = daysInMonth(month),
     showMonth,
     showYear,
-    date
+    mode = "date",
+    date,
+    dates = [],
+    range = [],
   } = props;
 
   const baseDate = dayjs().year(year).month(month);
+
+  const getActive = (d: Dayjs): boolean => {
+    if (mode === "date") {
+      return d.isSame(date, "date");
+    }
+
+    if (mode === "multiple") {
+      return Boolean(dates.find((dd) => dayjs(dd).isSame(d, "date")));
+    }
+
+    if (mode === "range") {
+      return Boolean(range.find((dd) => dayjs(dd).isSame(d, "date")));
+    }
+
+    return false;
+  };
+
+  const getBetween = (d: Dayjs): boolean => {
+    if (mode === "range") {
+      return (
+        range.length === 2 &&
+        d.isAfter(range[0], "date") &&
+        d.isBefore(range[1], "date")
+      );
+    }
+
+    return false;
+  };
 
   const days: IDay[] = [];
   for (let i = startDate; i <= endDate; i++) {
@@ -79,7 +111,8 @@ const getMonthDays = (props: IGetMonthDays): IDay[] => {
       year: year,
       month: month,
       isWeekend: weekends.includes(value.day()),
-      isCurrent: date ? value.isSame(date, "date") : false,
+      isActive: getActive(value),
+      isBetween: getBetween(value),
       currentMonth: showMonth === month,
       currentYear: showYear === year,
     };
@@ -94,8 +127,10 @@ export const useCalendar = (props: IUseCalendarProps) => {
   const {
     mode = "date",
     showMonth = dayjs().month(),
-    date = dayjs().toDate(),
     showYear = dayjs().year(),
+    date = dayjs().toDate(),
+    dates,
+    range,
   } = props;
 
   const daysInCurrentMonth = daysInMonth();
@@ -104,6 +139,9 @@ export const useCalendar = (props: IUseCalendarProps) => {
 
   const currentDays: IDay[] = getMonthDays({
     date,
+    dates,
+    range,
+    mode,
     month: showMonth,
     year: showYear,
     weekends: [0, 6],

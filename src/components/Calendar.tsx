@@ -1,29 +1,83 @@
 import dayjs from "dayjs";
-import React from "react";
+import React, { useState } from "react";
 import styled, { css } from "styled-components";
-import { useCalendar } from "../hooks/useCalendar";
+import { IMode, useCalendar } from "../hooks/useCalendar";
 
 export type ICalendar = {
-  date: Date;
-  onDateChange?: (v: Date) => void;
+  mode: IMode;
   showMonth: number;
+  showYear: number;
+
+  date?: Date;
+  dates?: Date[];
+  range?: Date[];
+
+  onDateChange?: (v: Date) => void;
+  onDatesChange?: (v: Date[]) => void;
+  onRangeChange?: (v: Date[]) => void;
 };
 
-export const Calendar = ({ showMonth, date, onDateChange }: ICalendar) => {
+export const Calendar = ({
+  mode,
+  showMonth,
+  showYear,
+  date,
+  dates = [],
+  range = [],
+  onDateChange,
+  onDatesChange,
+  onRangeChange,
+}: ICalendar) => {
   const { active, after, before } = useCalendar({
+    mode,
     date,
+    dates,
+    range,
     showMonth,
+    showYear,
   });
+
+  //ToDo сделать начало месяца от даты, а не в тупую номер года и месяца
+
+  const handleDateClick = (date: Date) => {
+    if (mode === "date") {
+      onDateChange?.(date);
+    }
+
+    if (mode === "multiple") {
+      const includes = Boolean(
+        dates.find((d) => dayjs(d).isSame(date, "date"))
+      );
+      onDatesChange?.(
+        includes
+          ? dates.filter((d) => !dayjs(d).isSame(date, "date"))
+          : [...dates, date]
+      );
+    }
+
+    if (mode === "range") {
+      if (range.length === 0 || range.length === 2) {
+        onRangeChange?.([date]);
+      } else {
+        const _dates = [...range, date];
+        _dates.sort((a, b) => a.getTime() - b.getTime());
+
+        onRangeChange?.(_dates.slice(0, 2));
+      }
+    }
+  };
 
   return (
     <Root>
       <Header>
         {dayjs()
           .month(showMonth)
+          .year(showYear)
           .toDate()
           .toLocaleString("ru-ru", { month: "long" })}{" "}
         {dayjs()
           .month(showMonth)
+          .year(showYear)
           .toDate()
           .toLocaleString("ru-ru", { year: "numeric" })}
       </Header>
@@ -41,7 +95,8 @@ export const Calendar = ({ showMonth, date, onDateChange }: ICalendar) => {
             key={day.value.valueOf()}
             $weekend={day.isWeekend}
             $currentMonth={day.currentMonth}
-            $current={day.isCurrent}
+            $current={day.isActive}
+            $between={day.isBetween}
           >
             {day.date}
           </Day>
@@ -51,10 +106,10 @@ export const Calendar = ({ showMonth, date, onDateChange }: ICalendar) => {
             key={day.value.valueOf()}
             $weekend={day.isWeekend}
             $currentMonth={day.currentMonth}
-            $current={day.isCurrent}
+            $current={day.isActive}
+            $between={day.isBetween}
             onClick={() => {
-              console.log("click")
-              onDateChange?.(day.value)
+              handleDateClick(day.value);
             }}
           >
             {day.date}
@@ -65,7 +120,8 @@ export const Calendar = ({ showMonth, date, onDateChange }: ICalendar) => {
             key={day.value.valueOf()}
             $weekend={day.isWeekend}
             $currentMonth={day.currentMonth}
-            $current={day.isCurrent}
+            $current={day.isActive}
+            $between={day.isBetween}
           >
             {day.date}
           </Day>
@@ -99,6 +155,7 @@ const Day = styled.div<{
   $weekend: boolean;
   $currentMonth: boolean;
   $current: boolean;
+  $between: boolean;
 }>`
   font-size: 14px;
   border: 1px solid #dbdbdb;
@@ -114,6 +171,12 @@ const Day = styled.div<{
     p.$weekend &&
     css`
       color: grey;
+    `}
+
+  ${(p) =>
+    p.$between &&
+    css`
+      background-color: #ff634773;
     `}
 
   ${(p) =>
