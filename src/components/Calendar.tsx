@@ -77,7 +77,7 @@ export const Calendar = (props: ICalendarProps) => {
     trimWeeks,
     disabled,
     minDate,
-    maxDate
+    maxDate,
   });
 
   const handlePrev = useCallback(() => {
@@ -92,12 +92,13 @@ export const Calendar = (props: ICalendarProps) => {
     );
   }, [months.length]);
 
-  const handleDateClick = useCallback((date: IDay) => {
-    if (mode === "date") {
-      onDateChange?.(date.value);
-    }
+  const handleDateChange = useCallback(
+    (date: IDay) => onDateChange?.(date.value),
+    [onDateChange]
+  );
 
-    if (mode === "multiple") {
+  const handleDatesChange = useCallback(
+    (date: IDay) => {
       const includes = Boolean(
         dates.find((d) => dayjs(d).isSame(date.value, "date"))
       );
@@ -106,9 +107,12 @@ export const Calendar = (props: ICalendarProps) => {
           ? dates.filter((d) => !dayjs(d).isSame(date.value, "date"))
           : [...dates, date.value]
       );
-    }
+    },
+    [dates, onDatesChange]
+  );
 
-    if (mode === "range") {
+  const handleRangeChange = useCallback(
+    (date: IDay) => {
       if (range.length === 0 || range.length === 2) {
         onRangeChange?.([date.value]);
       } else {
@@ -117,8 +121,22 @@ export const Calendar = (props: ICalendarProps) => {
 
         onRangeChange?.(_dates.slice(0, 2) as IRange);
       }
-    }
-  }, [dates, mode, onDateChange, onDatesChange, onRangeChange, range]);
+    },
+    [onRangeChange, range]
+  );
+
+  const handleDateClick = useCallback(
+    (date: IDay) => {
+      const map = {
+        "date": handleDateChange,
+        "multiple": handleDatesChange,
+        "range": handleRangeChange,
+      }
+
+      map[mode]?.(date);
+    },
+    [handleDateChange, handleDatesChange, handleRangeChange, mode]
+  );
 
   return (
     <Root $columns={columns}>
@@ -134,9 +152,7 @@ export const Calendar = (props: ICalendarProps) => {
           {...props}
         />
       ))}
-      <NextButton onClick={handleNext}>
-        {">"}
-      </NextButton>
+      <NextButton onClick={handleNext}>{">"}</NextButton>
     </Root>
   );
 };
