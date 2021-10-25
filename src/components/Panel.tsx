@@ -38,6 +38,8 @@ export const Panel = ({
   hideExternal,
   trimWeeks,
   disabled = [],
+  minDate,
+  maxDate
 }: IPanelProps) => {
   const { active, after, before } = useCalendar({
     baseDate,
@@ -50,6 +52,8 @@ export const Panel = ({
     weekends,
     trimWeeks,
     disabled,
+    minDate,
+    maxDate
   });
 
   const handleDateClick = (date: Date) => {
@@ -141,7 +145,6 @@ export const Panel = ({
 
 const Root = styled.div`
   padding: 4px;
-  border: 1px solid lightgrey;
 `;
 
 const Header = styled.div`

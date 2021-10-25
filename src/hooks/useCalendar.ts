@@ -96,12 +96,13 @@ const getMonthDays = (props: IGetMonthDays): IDay[] => {
 };
 
 export const useCalendar = (props: IUseCalendarProps) => {
-  const { mode, baseDate, date, dates, range, weekends, trimWeeks, disabled } =
+  const { mode, baseDate, date, dates, range, weekends, trimWeeks, disabled, minDate, maxDate } =
     props;
 
   const disabledRanges: Array<[Date, Date]> = useMemo(() => {
     return disabled.filter((r) => Array.isArray(r)) as [Date, Date][];
   }, [disabled]);
+
   const disabledDates = useMemo(() => {
     return disabled.filter((d) => typeof d === "object");
   }, [disabled]) as Date[];
@@ -135,11 +136,13 @@ export const useCalendar = (props: IUseCalendarProps) => {
   const getDisabled = useCallback(
     (d: Dayjs) => {
       return (
+        (minDate && Boolean(d.isBefore(minDate, "date"))) ||
+        (maxDate && Boolean(d.isAfter(maxDate, "date"))) ||
         Boolean(disabledDates?.find((dd) => dayjs(dd).isSame(d, "date"))) ||
         Boolean(disabledRanges?.find((r) => isBetween(d, r)))
       );
     },
-    [disabledDates, disabledRanges]
+    [disabledDates, disabledRanges, maxDate, minDate]
   );
 
   const currentDays: IDay[] = getMonthDays({
@@ -163,7 +166,6 @@ export const useCalendar = (props: IUseCalendarProps) => {
       ) -
       currentDays[0].weekday +
       2,
-    endDate: daysInMonth(baseDate.getMonth() - 1),
     external: true,
     getActive,
     getBetween,

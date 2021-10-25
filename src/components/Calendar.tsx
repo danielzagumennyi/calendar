@@ -48,6 +48,8 @@ export const Calendar = (props: ICalendarProps) => {
     hideExternal,
     trimWeeks,
     disabled,
+    minDate,
+    maxDate
   } = props;
 
   const [startDate, setStartDate] = useState<Date>(
@@ -77,9 +79,11 @@ export const Calendar = (props: ICalendarProps) => {
 
   return (
     <Root $columns={columns}>
-      <PrevButton onClick={handlePrev}>p</PrevButton>
+      <PrevButton onClick={handlePrev}>{"<"}</PrevButton>
       {months.map((baseDate) => (
         <Panel
+          minDate={minDate}
+          maxDate={maxDate}
           disabled={disabled}
           trimWeeks={trimWeeks}
           hideExternal={hideExternal}
@@ -96,7 +100,9 @@ export const Calendar = (props: ICalendarProps) => {
           onRangeChange={props.onRangeChange}
         />
       ))}
-      <NextButton onClick={handleNext}>N</NextButton>
+      <NextButton onClick={handleNext}>
+        {">"}
+      </NextButton>
     </Root>
   );
 };
@@ -105,6 +111,8 @@ const Root = styled.div<{ $columns: number }>`
   display: grid;
   grid-template-columns: repeat(${(p) => p.$columns}, 1fr);
   position: relative;
+  border: 1px solid lightgrey;
+  border-radius: 4px;
 `;
 
 const Button = styled.div`
@@ -118,6 +126,8 @@ const Button = styled.div`
   color: white;
   width: 36px;
   height: 36px;
+  user-select: none;
+  cursor: pointer;
 `;
 
 const PrevButton = styled(Button)`

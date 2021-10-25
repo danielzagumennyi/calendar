@@ -35,23 +35,25 @@ function App() {
         onRangeChange={(r) => setRange(r)}
         rows={2}
         columns={4}
-        disabled={[
-          [
-            dayjs().toDate(),
-            dayjs()
-              .set("d", +10)
-              .toDate(),
-          ],
-          dayjs()
-            .set("d", +25)
-            .toDate(),
-          dayjs()
-            .set("d", +27)
-            .toDate(),
-          dayjs()
-            .set("d", +132)
-            .toDate(),
-        ]}
+        // disabled={[
+        //   [
+        //     dayjs().toDate(),
+        //     dayjs()
+        //       .set("d", +10)
+        //       .toDate(),
+        //   ],
+        //   dayjs()
+        //     .set("d", +25)
+        //     .toDate(),
+        //   dayjs()
+        //     .set("d", +27)
+        //     .toDate(),
+        //   dayjs()
+        //     .set("d", +132)
+        //     .toDate(),
+        // ]}
+        // maxDate={new Date()}
+        minDate={new Date()}
         // hideExternal
         // trimWeeks
       />
@@ -63,6 +65,7 @@ const Root = styled.div`
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
+  padding-top: 50px;
 `;
 
 export default App;
