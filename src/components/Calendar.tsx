@@ -127,6 +127,8 @@ export const Calendar = (props: ICalendarProps) => {
 
   const handleDateClick = useCallback(
     (date: IDay) => {
+      if (date.isDisabled) return
+
       const map = {
         "date": handleDateChange,
         "multiple": handleDatesChange,
