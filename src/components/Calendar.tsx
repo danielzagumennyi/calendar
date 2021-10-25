@@ -1,17 +1,14 @@
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import styled from "styled-components";
-import { IMode } from "../hooks/useCalendar";
+import { IDay, IMode, useCalendar } from "../hooks/useCalendar";
 import { Panel } from "./Panel";
 
 (window as any).dayjs = dayjs;
 
-export type IRange = {
-  start: Date;
-  end: Date;
-};
-
 const defaultWeekends = [0, 6];
+
+export type IRange = [] | [Date] | [Date, Date];
 
 export type ICalendarProps = {
   columns?: number;
@@ -21,11 +18,11 @@ export type ICalendarProps = {
 
   date?: Date;
   dates?: Date[];
-  range?: Date[];
+  range?: IRange;
 
   onDateChange?: (v: Date) => void;
   onDatesChange?: (v: Date[]) => void;
-  onRangeChange?: (v: Date[]) => void;
+  onRangeChange?: (v: IRange) => void;
 
   weekends?: number[];
   trimWeeks?: boolean;
@@ -49,55 +46,92 @@ export const Calendar = (props: ICalendarProps) => {
     trimWeeks,
     disabled,
     minDate,
-    maxDate
+    maxDate,
+    onDateChange,
+    onDatesChange,
+    onRangeChange,
   } = props;
 
-  const [startDate, setStartDate] = useState<Date>(
+  const [startShowDate, setStartShowDate] = useState<Date>(
     date || dates[0] || range[0] || dayjs().date(1).toDate()
   );
 
   const months = useMemo(() => {
-    const month = startDate.getMonth();
-    const year = startDate.getFullYear();
+    const month = startShowDate.getMonth();
+    const year = startShowDate.getFullYear();
 
     return Array(columns * rows)
       .fill(true)
       .map((_, index) => new Date(year, month + index, 1));
-  }, [columns, rows, startDate]);
+  }, [columns, rows, startShowDate]);
 
-  const handlePrev = () => {
-    setStartDate((prev) => dayjs(prev).add(-months.length, "M").toDate());
-  };
+  const monthsData = useCalendar({
+    months,
 
-  const handleNext = () => {
-    setStartDate((prev) =>
+    mode,
+    date,
+    dates,
+    range,
+
+    weekends,
+    trimWeeks,
+    disabled,
+    minDate,
+    maxDate
+  });
+
+  const handlePrev = useCallback(() => {
+    setStartShowDate((prev) => dayjs(prev).add(-months.length, "M").toDate());
+  }, [months]);
+
+  const handleNext = useCallback(() => {
+    setStartShowDate((prev) =>
       dayjs(prev)
         .add(+months.length, "M")
         .toDate()
     );
-  };
+  }, [months.length]);
+
+  const handleDateClick = useCallback((date: IDay) => {
+    if (mode === "date") {
+      onDateChange?.(date.value);
+    }
+
+    if (mode === "multiple") {
+      const includes = Boolean(
+        dates.find((d) => dayjs(d).isSame(date.value, "date"))
+      );
+      onDatesChange?.(
+        includes
+          ? dates.filter((d) => !dayjs(d).isSame(date.value, "date"))
+          : [...dates, date.value]
+      );
+    }
+
+    if (mode === "range") {
+      if (range.length === 0 || range.length === 2) {
+        onRangeChange?.([date.value]);
+      } else {
+        const _dates = [...range, date.value];
+        _dates.sort((a, b) => a.getTime() - b.getTime());
+
+        onRangeChange?.(_dates.slice(0, 2) as IRange);
+      }
+    }
+  }, [dates, mode, onDateChange, onDatesChange, onRangeChange, range]);
 
   return (
     <Root $columns={columns}>
       <PrevButton onClick={handlePrev}>{"<"}</PrevButton>
-      {months.map((baseDate) => (
+      {monthsData.map((props) => (
         <Panel
-          minDate={minDate}
-          maxDate={maxDate}
-          disabled={disabled}
+          onClick={handleDateClick}
           trimWeeks={trimWeeks}
           hideExternal={hideExternal}
           locale={locale}
           weekends={weekends}
-          mode={mode}
-          key={baseDate.toLocaleDateString()}
-          baseDate={baseDate}
-          date={date}
-          onDateChange={props.onDateChange}
-          dates={dates}
-          onDatesChange={props.onDatesChange}
-          range={range}
-          onRangeChange={props.onRangeChange}
+          key={props.active[0].value.toLocaleDateString()}
+          {...props}
         />
       ))}
       <NextButton onClick={handleNext}>

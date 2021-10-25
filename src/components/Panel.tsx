@@ -1,99 +1,40 @@
 import dayjs from "dayjs";
 import React from "react";
 import styled, { css } from "styled-components";
-import { IMode, useCalendar } from "../hooks/useCalendar";
+import { IDay } from "../hooks/useCalendar";
 
 export type IPanelProps = {
-  mode: IMode;
-  baseDate: Date;
   locale?: string;
-
-  date?: Date;
-  dates?: Date[];
-  range?: Date[];
-
-  onDateChange?: (v: Date) => void;
-  onDatesChange?: (v: Date[]) => void;
-  onRangeChange?: (v: Date[]) => void;
+  
+  onClick?: (d: IDay) => void;
 
   hideExternal?: boolean;
   weekends?: number[];
   trimWeeks?: boolean;
-  disabled?: Array<Date | [Date, Date]>;
-  minDate?: Date;
-  maxDate?: Date;
+  active: IDay[]
+  before: IDay[]
+  after: IDay[]
 };
 
 export const Panel = ({
-  mode = "date",
-  baseDate = new Date(),
-  date = new Date(),
-  dates = [],
-  range = [],
-  onDateChange,
-  onDatesChange,
-  onRangeChange,
-  weekends = [],
+  onClick,
   locale,
+  active,
+  before,
+  after,
   hideExternal,
-  trimWeeks,
-  disabled = [],
-  minDate,
-  maxDate
 }: IPanelProps) => {
-  const { active, after, before } = useCalendar({
-    baseDate,
-
-    mode,
-    date,
-    dates,
-    range,
-
-    weekends,
-    trimWeeks,
-    disabled,
-    minDate,
-    maxDate
-  });
-
-  const handleDateClick = (date: Date) => {
-    if (mode === "date") {
-      onDateChange?.(date);
-    }
-
-    if (mode === "multiple") {
-      const includes = Boolean(
-        dates.find((d) => dayjs(d).isSame(date, "date"))
-      );
-      onDatesChange?.(
-        includes
-          ? dates.filter((d) => !dayjs(d).isSame(date, "date"))
-          : [...dates, date]
-      );
-    }
-
-    if (mode === "range") {
-      if (range.length === 0 || range.length === 2) {
-        onRangeChange?.([date]);
-      } else {
-        const _dates = [...range, date];
-        _dates.sort((a, b) => a.getTime() - b.getTime());
-
-        onRangeChange?.(_dates.slice(0, 2));
-      }
-    }
-  };
 
   return (
     <Root>
       <Header>
-        {baseDate.toLocaleString(locale, { month: "long" })}{" "}
-        {baseDate.toLocaleString(locale, { year: "numeric" })}
+        {active[0].value.toLocaleString(locale, { month: "long" })}{" "}
+        {active[0].value.toLocaleString(locale, { year: "numeric" })}
       </Header>
       <Wrapper>
         {[1, 2, 3, 4, 5, 6, 0].map((day) => (
           <div key={day}>
-            {dayjs(baseDate)
+            {dayjs(active[0].value)
               .day(day)
               .toDate()
               .toLocaleString(locale, { weekday: "short" })}
@@ -120,7 +61,7 @@ export const Panel = ({
             $between={day.isBetween}
             $disabled={day.isDisabled}
             onClick={() => {
-              !day.isDisabled && handleDateClick(day.value);
+              onClick?.(day);
             }}
           >
             {day.date}
