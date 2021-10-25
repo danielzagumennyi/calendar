@@ -184,7 +184,7 @@ const Day = styled.div<{
 
   ${(p) =>
     p.$between &&
-    p.$external &&
+    !p.$external &&
     css`
       background-color: #ff634773;
     `}
