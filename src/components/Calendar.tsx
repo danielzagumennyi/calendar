@@ -1,12 +1,23 @@
 import dayjs from "dayjs";
-import React, { useState } from "react";
-import styled, { css } from "styled-components";
-import { IMode, useCalendar } from "../hooks/useCalendar";
+import { useMemo, useState } from "react";
+import styled from "styled-components";
+import { IMode } from "../hooks/useCalendar";
+import { Panel } from "./Panel";
 
-export type ICalendar = {
-  mode: IMode;
-  showMonth: number;
-  showYear: number;
+(window as any).dayjs = dayjs;
+
+export type IRange = {
+  start: Date;
+  end: Date;
+};
+
+const defaultWeekends = [0, 6];
+
+export type ICalendarProps = {
+  columns?: number;
+  rows?: number;
+  mode?: IMode;
+  locale?: string;
 
   date?: Date;
   dates?: Date[];
@@ -15,189 +26,104 @@ export type ICalendar = {
   onDateChange?: (v: Date) => void;
   onDatesChange?: (v: Date[]) => void;
   onRangeChange?: (v: Date[]) => void;
+
+  weekends?: number[];
+  trimWeeks?: boolean;
+  hideExternal?: boolean;
+  disabled?: Array<Date | [Date, Date]>;
+  minDate?: Date;
+  maxDate?: Date;
 };
 
-export const Calendar = ({
-  mode,
-  showMonth,
-  showYear,
-  date,
-  dates = [],
-  range = [],
-  onDateChange,
-  onDatesChange,
-  onRangeChange,
-}: ICalendar) => {
-  const { active, after, before } = useCalendar({
-    mode,
+export const Calendar = (props: ICalendarProps) => {
+  const {
+    columns = 1,
+    rows = 1,
     date,
-    dates,
-    range,
-    showMonth,
-    showYear,
-  });
+    dates = [],
+    range = [],
+    mode = "date",
+    weekends = defaultWeekends,
+    locale = "en-en",
+    hideExternal,
+    trimWeeks,
+    disabled,
+  } = props;
 
-  //ToDo сделать начало месяца от даты, а не в тупую номер года и месяца
+  const [startDate, setStartDate] = useState<Date>(
+    date || dates[0] || range[0] || dayjs().date(1).toDate()
+  );
 
-  const handleDateClick = (date: Date) => {
-    if (mode === "date") {
-      onDateChange?.(date);
-    }
+  const months = useMemo(() => {
+    const month = startDate.getMonth();
+    const year = startDate.getFullYear();
 
-    if (mode === "multiple") {
-      const includes = Boolean(
-        dates.find((d) => dayjs(d).isSame(date, "date"))
-      );
-      onDatesChange?.(
-        includes
-          ? dates.filter((d) => !dayjs(d).isSame(date, "date"))
-          : [...dates, date]
-      );
-    }
+    return Array(columns * rows)
+      .fill(true)
+      .map((_, index) => new Date(year, month + index, 1));
+  }, [columns, rows, startDate]);
 
-    if (mode === "range") {
-      if (range.length === 0 || range.length === 2) {
-        onRangeChange?.([date]);
-      } else {
-        const _dates = [...range, date];
-        _dates.sort((a, b) => a.getTime() - b.getTime());
+  const handlePrev = () => {
+    setStartDate((prev) => dayjs(prev).add(-months.length, "M").toDate());
+  };
 
-        onRangeChange?.(_dates.slice(0, 2));
-      }
-    }
+  const handleNext = () => {
+    setStartDate((prev) =>
+      dayjs(prev)
+        .add(+months.length, "M")
+        .toDate()
+    );
   };
 
   return (
-    <Root>
-      <Header>
-        {dayjs()
-          .month(showMonth)
-          .year(showYear)
-          .toDate()
-          .toLocaleString("ru-ru", { month: "long" })}{" "}
-        {dayjs()
-          .month(showMonth)
-          .year(showYear)
-          .toDate()
-          .toLocaleString("ru-ru", { year: "numeric" })}
-      </Header>
-      <Wrapper>
-        {[1, 2, 3, 4, 5, 6, 0].map((day) => (
-          <div key={day}>
-            {dayjs()
-              .day(day)
-              .toDate()
-              .toLocaleString("ru-ru", { weekday: "short" })}
-          </div>
-        ))}
-        {before.map((day) => (
-          <Day
-            key={day.value.valueOf()}
-            $weekend={day.isWeekend}
-            $currentMonth={day.currentMonth}
-            $current={day.isActive}
-            $between={day.isBetween}
-          >
-            {day.date}
-          </Day>
-        ))}
-        {active.map((day) => (
-          <Day
-            key={day.value.valueOf()}
-            $weekend={day.isWeekend}
-            $currentMonth={day.currentMonth}
-            $current={day.isActive}
-            $between={day.isBetween}
-            onClick={() => {
-              handleDateClick(day.value);
-            }}
-          >
-            {day.date}
-          </Day>
-        ))}
-        {after.map((day) => (
-          <Day
-            key={day.value.valueOf()}
-            $weekend={day.isWeekend}
-            $currentMonth={day.currentMonth}
-            $current={day.isActive}
-            $between={day.isBetween}
-          >
-            {day.date}
-          </Day>
-        ))}
-      </Wrapper>
+    <Root $columns={columns}>
+      <PrevButton onClick={handlePrev}>p</PrevButton>
+      {months.map((baseDate) => (
+        <Panel
+          disabled={disabled}
+          trimWeeks={trimWeeks}
+          hideExternal={hideExternal}
+          locale={locale}
+          weekends={weekends}
+          mode={mode}
+          key={baseDate.toLocaleDateString()}
+          baseDate={baseDate}
+          date={date}
+          onDateChange={props.onDateChange}
+          dates={dates}
+          onDatesChange={props.onDatesChange}
+          range={range}
+          onRangeChange={props.onRangeChange}
+        />
+      ))}
+      <NextButton onClick={handleNext}>N</NextButton>
     </Root>
   );
 };
 
-const Root = styled.div`
-  padding: 4px;
-  border: 1px solid lightgrey;
-`;
-
-const Header = styled.div`
-  text-align: center;
-  font-weight: bold;
-  padding: 8px 0 4px;
-`;
-
-const Wrapper = styled.div`
+const Root = styled.div<{ $columns: number }>`
   display: grid;
-  grid-template-columns: repeat(7, 48px);
-  grid-auto-rows: 48px;
-  align-items: center;
-  justify-items: center;
-  place-content: center;
+  grid-template-columns: repeat(${(p) => p.$columns}, 1fr);
+  position: relative;
 `;
 
-const Day = styled.div<{
-  $weekend: boolean;
-  $currentMonth: boolean;
-  $current: boolean;
-  $between: boolean;
-}>`
-  font-size: 14px;
-  border: 1px solid #dbdbdb;
-  color: #333;
-  border-radius: 6px;
-  width: 36px;
-  height: 36px;
+const Button = styled.div`
+  position: absolute;
+  top: 4px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: black;
+  color: white;
+  width: 36px;
+  height: 36px;
+`;
 
-  ${(p) =>
-    p.$weekend &&
-    css`
-      color: grey;
-    `}
+const PrevButton = styled(Button)`
+  left: 4px;
+`;
 
-  ${(p) =>
-    p.$between &&
-    css`
-      background-color: #ff634773;
-    `}
-
-  ${(p) =>
-    !p.$currentMonth
-      ? css`
-          border: none;
-          color: grey;
-        `
-      : css`
-          &:hover {
-            border-color: grey;
-            cursor: pointer;
-          }
-        `}
-
-  ${(p) =>
-    p.$current &&
-    css`
-      border-color: tomato;
-      border-width: 2px;
-      color: #000;
-      font-weight: bold;
-    `}
+const NextButton = styled(Button)`
+  right: 4px;
 `;

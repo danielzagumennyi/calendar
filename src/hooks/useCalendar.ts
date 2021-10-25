@@ -1,7 +1,9 @@
 import dayjs, { Dayjs } from "dayjs";
+import { useCallback, useMemo } from "react";
+import { parseDate } from "../utils/utils";
 
 const daysInMonth = (month?: number) => {
-  var now = new Date();
+  const now = new Date();
   return new Date(
     now.getFullYear(),
     (month || now.getMonth()) + 1,
@@ -18,12 +20,17 @@ const getWeekOrder = (day: number) => {
 };
 
 export type IUseCalendarProps = {
-  mode?: IMode;
-  date?: Date;
-  dates?: Date[];
-  range?: Date[];
-  showMonth?: number;
-  showYear?: number;
+  mode: IMode;
+  date: Date;
+  dates: Date[];
+  range: Date[];
+  baseDate: Date;
+
+  weekends: number[];
+  trimWeeks?: boolean;
+  disabled: Array<Date | Date[]>;
+  minDate?: Date;
+  maxDate?: Date;
 };
 
 export type IDay = {
@@ -34,87 +41,52 @@ export type IDay = {
   month: number;
   year: number;
   isWeekend: boolean;
-  currentMonth: boolean;
-  currentYear: boolean;
   isActive: boolean;
   isBetween: boolean;
+  isExternal: boolean;
+  isDisabled: boolean;
 };
 
 type IGetMonthDays = {
-  mode?: IMode;
-  date?: Date;
-  dates?: Date[];
-  range?: Date[];
-  year: number;
-  month: number;
-  weekends: number[];
+  baseDate: Date;
+  weekends?: number[];
   startDate?: number;
   endDate?: number;
-  showMonth: number;
-  showYear: number;
+  external?: boolean;
+
+  getActive: (d: Dayjs) => boolean;
+  getBetween: (d: Dayjs) => boolean;
+  getDisabled: (d: Dayjs) => boolean;
+};
+
+const isBetween = (d: Dayjs, range: Date[]): boolean => {
+  return d.isAfter(range?.[0], "date") && d.isBefore(range?.[1], "date");
 };
 
 const getMonthDays = (props: IGetMonthDays): IDay[] => {
   const {
-    year,
-    month,
+    baseDate,
     weekends,
     startDate = 1,
-    endDate = daysInMonth(month),
-    showMonth,
-    showYear,
-    mode = "date",
-    date,
-    dates = [],
-    range = [],
+    endDate = daysInMonth(baseDate.getMonth()),
+    external = false,
+    getActive,
+    getBetween,
+    getDisabled,
   } = props;
-
-  const baseDate = dayjs().year(year).month(month);
-
-  const getActive = (d: Dayjs): boolean => {
-    if (mode === "date") {
-      return d.isSame(date, "date");
-    }
-
-    if (mode === "multiple") {
-      return Boolean(dates.find((dd) => dayjs(dd).isSame(d, "date")));
-    }
-
-    if (mode === "range") {
-      return Boolean(range.find((dd) => dayjs(dd).isSame(d, "date")));
-    }
-
-    return false;
-  };
-
-  const getBetween = (d: Dayjs): boolean => {
-    if (mode === "range") {
-      return (
-        range.length === 2 &&
-        d.isAfter(range[0], "date") &&
-        d.isBefore(range[1], "date")
-      );
-    }
-
-    return false;
-  };
 
   const days: IDay[] = [];
   for (let i = startDate; i <= endDate; i++) {
     const value = dayjs(baseDate).date(i);
 
     const day: IDay = {
-      value: value.toDate(),
-      date: i,
-      day: value.day(),
+      ...parseDate(value),
       weekday: getWeekOrder(value.day()),
-      year: year,
-      month: month,
-      isWeekend: weekends.includes(value.day()),
+      isWeekend: Boolean(weekends?.includes(value.day())),
+      isExternal: external,
       isActive: getActive(value),
       isBetween: getBetween(value),
-      currentMonth: showMonth === month,
-      currentYear: showYear === year,
+      isDisabled: getDisabled(value),
     };
 
     days.push(day);
@@ -124,55 +96,98 @@ const getMonthDays = (props: IGetMonthDays): IDay[] => {
 };
 
 export const useCalendar = (props: IUseCalendarProps) => {
-  const {
-    mode = "date",
-    showMonth = dayjs().month(),
-    showYear = dayjs().year(),
-    date = dayjs().toDate(),
-    dates,
-    range,
-  } = props;
+  const { mode, baseDate, date, dates, range, weekends, trimWeeks, disabled } =
+    props;
 
-  const daysInCurrentMonth = daysInMonth();
+  const disabledRanges: Array<[Date, Date]> = useMemo(() => {
+    return disabled.filter((r) => Array.isArray(r)) as [Date, Date][];
+  }, [disabled]);
+  const disabledDates = useMemo(() => {
+    return disabled.filter((d) => typeof d === "object");
+  }, [disabled]) as Date[];
 
-  const monthStartDay = dayjs().year(showYear).month(showMonth).date(0).day();
+  const getActive = useCallback(
+    (d: Dayjs) => {
+      if (mode === "date") {
+        return d.isSame(date, "date");
+      }
+
+      if (mode === "multiple") {
+        return Boolean(dates?.find((dd) => dayjs(dd).isSame(d, "date")));
+      }
+
+      if (mode === "range") {
+        return Boolean(range?.find((dd) => dayjs(dd).isSame(d, "date")));
+      }
+
+      return false;
+    },
+    [date, dates, mode, range]
+  );
+
+  const getBetween = useCallback(
+    (d: Dayjs): boolean => {
+      return mode === "range" && range?.length === 2 && isBetween(d, range);
+    },
+    [mode, range]
+  );
+
+  const getDisabled = useCallback(
+    (d: Dayjs) => {
+      return (
+        Boolean(disabledDates?.find((dd) => dayjs(dd).isSame(d, "date"))) ||
+        Boolean(disabledRanges?.find((r) => isBetween(d, r)))
+      );
+    },
+    [disabledDates, disabledRanges]
+  );
 
   const currentDays: IDay[] = getMonthDays({
-    date,
-    dates,
-    range,
-    mode,
-    month: showMonth,
-    year: showYear,
-    weekends: [0, 6],
-    showMonth,
-    showYear,
+    baseDate,
+    weekends,
+    getActive,
+    getBetween,
+    getDisabled,
   });
 
-  const startDate = daysInMonth(showMonth - 1) - monthStartDay + 1;
-
   const daysBefore: IDay[] = getMonthDays({
-    month: showMonth - 1,
-    year: showYear,
-    weekends: [0, 6],
-    startDate,
-    showMonth,
-    showYear,
+    baseDate: dayjs(baseDate)
+      .set("M", baseDate.getMonth() - 1)
+      .toDate(),
+    weekends,
+    startDate:
+      daysInMonth(
+        dayjs(baseDate)
+          .set("M", baseDate.getMonth() - 1)
+          .month()
+      ) -
+      currentDays[0].weekday +
+      2,
+    endDate: daysInMonth(baseDate.getMonth() - 1),
+    external: true,
+    getActive,
+    getBetween,
+    getDisabled: () => false,
   });
 
   const endDate = 7 - currentDays[currentDays.length - 1].weekday;
-
-  const lastRowEnd = endDate === 0 ? 7 : endDate;
+  const lastRowEnd = !trimWeeks && endDate === 0 ? 7 : endDate;
 
   const daysAfter: IDay[] = getMonthDays({
-    month: showMonth + 1,
-    year: showYear,
-    weekends: [0, 6],
+    baseDate: dayjs(baseDate)
+      .set("M", baseDate.getMonth() + 1)
+      .toDate(),
+    weekends,
     endDate:
       lastRowEnd +
-      (currentDays.length + daysBefore.length + lastRowEnd === 5 * 7 ? 7 : 0),
-    showMonth,
-    showYear,
+      (currentDays.length + daysBefore.length + lastRowEnd === 5 * 7 &&
+      !trimWeeks
+        ? 7
+        : 0),
+    external: true,
+    getActive,
+    getBetween,
+    getDisabled: () => false,
   });
 
   return {

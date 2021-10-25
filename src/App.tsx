@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import React, { useState } from "react";
 import styled, { createGlobalStyle } from "styled-components";
-import { Grid } from "./components/Grid";
+import { Calendar } from "./components/Calendar";
 
 const Reset = createGlobalStyle`
   *, *::before, *::after {
@@ -24,23 +24,36 @@ function App() {
       .set("d", +10)
       .toDate(),
   ]);
-  const [range, setRange] = useState<Date[]>([
-    dayjs().year(2024).toDate(),
-    dayjs()
-      .year(2024)
-      .set("d", +10)
-      .toDate(),
-  ]);
+  const [range, setRange] = useState<Date[]>([]);
 
   return (
     <Root>
       <Reset />
-      <Grid
+      <Calendar
         mode={"range"}
         range={range}
         onRangeChange={(r) => setRange(r)}
         rows={2}
         columns={4}
+        disabled={[
+          [
+            dayjs().toDate(),
+            dayjs()
+              .set("d", +10)
+              .toDate(),
+          ],
+          dayjs()
+            .set("d", +25)
+            .toDate(),
+          dayjs()
+            .set("d", +27)
+            .toDate(),
+          dayjs()
+            .set("d", +132)
+            .toDate(),
+        ]}
+        // hideExternal
+        // trimWeeks
       />
     </Root>
   );
