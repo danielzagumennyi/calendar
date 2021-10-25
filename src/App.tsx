@@ -30,11 +30,15 @@ function App() {
     <Root>
       <Reset />
       <Calendar
-        mode={"range"}
-        range={range}
-        onRangeChange={(r) => setRange(r)}
-        rows={2}
-        columns={4}
+        // mode={"range"}
+        // range={range}
+        // onRangeChange={(r) => setRange(r)}
+        // rows={2}
+        // columns={4}
+        locale={"ru-ru"}
+        weekStartDay={1}
+        hideExternal
+        trimWeeks
         // disabled={[
         //   [
         //     dayjs().toDate(),
@@ -53,9 +57,7 @@ function App() {
         //     .toDate(),
         // ]}
         // maxDate={new Date()}
-        minDate={new Date()}
-        // hideExternal
-        // trimWeeks
+        // minDate={new Date()}
       />
     </Root>
   );

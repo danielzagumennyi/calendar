@@ -10,6 +10,8 @@ const defaultWeekends = [0, 6];
 
 export type IRange = [] | [Date] | [Date, Date];
 
+export type IWeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
 export type ICalendarProps = {
   columns?: number;
   rows?: number;
@@ -30,7 +32,14 @@ export type ICalendarProps = {
   disabled?: Array<Date | [Date, Date]>;
   minDate?: Date;
   maxDate?: Date;
+  weekStartDay?: IWeekDay;
 };
+
+
+const getWeek = (start: IWeekDay) => {
+  const week: IWeekDay[] = [0,1,2,3,4,5,6];
+  return week.slice(start).concat(week.slice(0, start));
+}
 
 export const Calendar = (props: ICalendarProps) => {
   const {
@@ -50,7 +59,12 @@ export const Calendar = (props: ICalendarProps) => {
     onDateChange,
     onDatesChange,
     onRangeChange,
+    weekStartDay = 0,
   } = props;
+
+  const week = useMemo(() => {
+    return getWeek(weekStartDay)
+  }, [weekStartDay])
 
   const [startShowDate, setStartShowDate] = useState<Date>(
     date || dates[0] || range[0] || dayjs().date(1).toDate()
@@ -67,6 +81,7 @@ export const Calendar = (props: ICalendarProps) => {
 
   const monthsData = useCalendar({
     months,
+    week,
 
     mode,
     date,
@@ -127,13 +142,13 @@ export const Calendar = (props: ICalendarProps) => {
 
   const handleDateClick = useCallback(
     (date: IDay) => {
-      if (date.isDisabled) return
+      if (date.isDisabled) return;
 
       const map = {
-        "date": handleDateChange,
-        "multiple": handleDatesChange,
-        "range": handleRangeChange,
-      }
+        date: handleDateChange,
+        multiple: handleDatesChange,
+        range: handleRangeChange,
+      };
 
       map[mode]?.(date);
     },
@@ -150,6 +165,7 @@ export const Calendar = (props: ICalendarProps) => {
           hideExternal={hideExternal}
           locale={locale}
           weekends={weekends}
+          week={week}
           key={props.active[0].value.toLocaleDateString()}
           {...props}
         />

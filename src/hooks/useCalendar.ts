@@ -1,5 +1,6 @@
 import dayjs, { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
+import { IWeekDay } from "../components/Calendar";
 import { parseDate } from "../utils/utils";
 
 const daysInMonth = (month?: number) => {
@@ -13,12 +14,6 @@ const daysInMonth = (month?: number) => {
 
 export type IMode = "date" | "range" | "multiple";
 
-const daysMap = [1, 2, 3, 4, 5, 6, 0];
-
-const getWeekOrder = (day: number) => {
-  return daysMap.indexOf(day) + 1;
-};
-
 export type IUseCalendarProps = {
   months: Date[];
   mode: IMode;
@@ -26,6 +21,7 @@ export type IUseCalendarProps = {
   dates?: Date[];
   range?: Date[];
 
+  week: IWeekDay[];
   weekends?: number[];
   trimWeeks?: boolean;
   disabled?: Array<Date | Date[]>;
@@ -53,10 +49,11 @@ type IGetMonthDays = {
   startDate?: number;
   endDate?: number;
   external?: boolean;
+  week:  IWeekDay[];
 
   getActive: (d: Dayjs) => boolean;
   getBetween: (d: Dayjs) => boolean;
-  getDisabled: (d: Dayjs) => boolean;
+  getDisabled?: (d: Dayjs) => boolean;
 };
 
 const isBetween = (d: Dayjs, range: Date[]): boolean => {
@@ -70,18 +67,21 @@ const getMonthDays = (props: IGetMonthDays): IDay[] => {
     startDate = 1,
     endDate = daysInMonth(baseDate.getMonth()),
     external = false,
+    week,
     getActive,
     getBetween,
-    getDisabled,
+    getDisabled = () => false,
   } = props;
 
   const days: IDay[] = [];
   for (let i = startDate; i <= endDate; i++) {
     const value = dayjs(baseDate).date(i);
 
+    const parsed = parseDate(value)
+
     const day: IDay = {
-      ...parseDate(value),
-      weekday: getWeekOrder(value.day()),
+      ...parsed,
+      weekday: week.indexOf(parsed.day as IWeekDay) + 1,
       isWeekend: Boolean(weekends?.includes(value.day())),
       isExternal: external,
       isActive: getActive(value),
@@ -107,6 +107,7 @@ export const useCalendar = (props: IUseCalendarProps) => {
     minDate,
     maxDate,
     months,
+    week,
   } = props;
 
   const disabledRanges: Array<[Date, Date]> = useMemo(() => {
@@ -120,7 +121,7 @@ export const useCalendar = (props: IUseCalendarProps) => {
   const getActive = useCallback(
     (d: Dayjs) => {
       if (mode === "date") {
-        return d.isSame(date, "date");
+        return Boolean(date && d.isSame(date, "date"));
       }
 
       if (mode === "multiple") {
@@ -162,45 +163,45 @@ export const useCalendar = (props: IUseCalendarProps) => {
       getActive,
       getBetween,
       getDisabled,
+      week,
     });
+
+    const beforeStartDate = daysInMonth(
+      dayjs(baseDate)
+        .set("M", baseDate.getMonth() - 1)
+        .month()
+    ) - currentDays[0].weekday + 2;
 
     const daysBefore: IDay[] = getMonthDays({
       baseDate: dayjs(baseDate)
         .set("M", baseDate.getMonth() - 1)
         .toDate(),
       weekends,
-      startDate:
-        daysInMonth(
-          dayjs(baseDate)
-            .set("M", baseDate.getMonth() - 1)
-            .month()
-        ) -
-        currentDays[0].weekday +
-        2,
+      startDate: beforeStartDate,
       external: true,
       getActive,
       getBetween,
-      getDisabled: () => false,
+      week,
     });
 
-    const endDate = 7 - currentDays[currentDays.length - 1].weekday;
-    const lastRowEnd = !trimWeeks && endDate === 0 ? 7 : endDate;
+    const endWeekDay = 7 - currentDays[currentDays.length - 1].weekday;
+    const additionalWeek = !trimWeeks && endWeekDay === 0 ? 7 : endWeekDay;
+    const afterEndDate = additionalWeek +
+    (currentDays.length + daysBefore.length + additionalWeek === 5 * 7 &&
+    !trimWeeks
+      ? 7
+      : 0)
 
     const daysAfter: IDay[] = getMonthDays({
       baseDate: dayjs(baseDate)
         .set("M", baseDate.getMonth() + 1)
         .toDate(),
       weekends,
-      endDate:
-        lastRowEnd +
-        (currentDays.length + daysBefore.length + lastRowEnd === 5 * 7 &&
-        !trimWeeks
-          ? 7
-          : 0),
+      endDate: afterEndDate,
       external: true,
       getActive,
       getBetween,
-      getDisabled: () => false,
+      week,
     });
 
     return {

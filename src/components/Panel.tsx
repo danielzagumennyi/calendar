@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import React from "react";
 import styled, { css } from "styled-components";
 import { IDay } from "../hooks/useCalendar";
+import { IWeekDay } from "./Calendar";
 
 export type IPanelProps = {
   locale?: string;
@@ -14,6 +15,7 @@ export type IPanelProps = {
   active: IDay[]
   before: IDay[]
   after: IDay[]
+  week: IWeekDay[]
 };
 
 export const Panel = ({
@@ -23,6 +25,7 @@ export const Panel = ({
   before,
   after,
   hideExternal,
+  week,
 }: IPanelProps) => {
 
   return (
@@ -32,7 +35,7 @@ export const Panel = ({
         {active[0].value.toLocaleString(locale, { year: "numeric" })}
       </Header>
       <Wrapper>
-        {[1, 2, 3, 4, 5, 6, 0].map((day) => (
+        {week.map((day) => (
           <div key={day}>
             {dayjs(active[0].value)
               .day(day)
