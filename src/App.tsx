@@ -1,7 +1,6 @@
-import dayjs from "dayjs";
-import React, { useState } from "react";
+import React from "react";
 import styled, { createGlobalStyle } from "styled-components";
-import { Calendar, IRange } from "./components/Calendar";
+import { Calendar } from "./components/Calendar";
 
 const Reset = createGlobalStyle`
   *, *::before, *::after {
@@ -17,14 +16,14 @@ const Reset = createGlobalStyle`
 `;
 
 function App() {
-  const [date, setDate] = useState(new Date());
-  const [dates, setDates] = useState([
-    new Date(),
-    dayjs()
-      .set("d", +10)
-      .toDate(),
-  ]);
-  const [range, setRange] = useState<IRange>([]);
+  // const [date, setDate] = useState(new Date());
+  // const [dates, setDates] = useState([
+  //   new Date(),
+  //   dayjs()
+  //     .set("d", +10)
+  //     .toDate(),
+  // ]);
+  // const [range, setRange] = useState<IRange>([]);
 
   return (
     <Root>

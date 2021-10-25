@@ -1,16 +1,7 @@
 import dayjs, { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 import { IWeekDay } from "../components/Calendar";
-import { parseDate } from "../utils/utils";
-
-const daysInMonth = (month?: number) => {
-  const now = new Date();
-  return new Date(
-    now.getFullYear(),
-    (month || now.getMonth()) + 1,
-    0
-  ).getDate();
-};
+import { getMonthBaseData, IBaseDayData, IBaseMonthData } from "../utils/utils";
 
 export type IMode = "date" | "range" | "multiple";
 
@@ -30,26 +21,21 @@ export type IUseCalendarProps = {
 };
 
 export type IDay = {
-  value: Date;
-  day: number;
   weekday: number;
-  date: number;
-  month: number;
-  year: number;
   isWeekend: boolean;
   isActive: boolean;
   isBetween: boolean;
   isExternal: boolean;
   isDisabled: boolean;
-};
+} & IBaseDayData;
 
 type IGetMonthDays = {
-  baseDate: Date;
+  baseData: IBaseMonthData;
   weekends?: number[];
   startDate?: number;
   endDate?: number;
   external?: boolean;
-  week:  IWeekDay[];
+  week: IWeekDay[];
 
   getActive: (d: Dayjs) => boolean;
   getBetween: (d: Dayjs) => boolean;
@@ -62,10 +48,9 @@ const isBetween = (d: Dayjs, range: Date[]): boolean => {
 
 const getMonthDays = (props: IGetMonthDays): IDay[] => {
   const {
-    baseDate,
     weekends,
     startDate = 1,
-    endDate = daysInMonth(baseDate.getMonth()),
+    endDate = props.baseData.numberOfDays,
     external = false,
     week,
     getActive,
@@ -74,15 +59,15 @@ const getMonthDays = (props: IGetMonthDays): IDay[] => {
   } = props;
 
   const days: IDay[] = [];
-  for (let i = startDate; i <= endDate; i++) {
-    const value = dayjs(baseDate).date(i);
 
-    const parsed = parseDate(value)
+  for (let i = startDate; i <= endDate; i++) {
+    const baseData = props.baseData.daysData[i - 1];
+    const value = dayjs(baseData.value);
 
     const day: IDay = {
-      ...parsed,
-      weekday: week.indexOf(parsed.day as IWeekDay) + 1,
-      isWeekend: Boolean(weekends?.includes(value.day())),
+      ...baseData,
+      weekday: week.indexOf(baseData.day as IWeekDay) + 1,
+      isWeekend: Boolean(weekends?.includes(baseData.day)),
       isExternal: external,
       isActive: getActive(value),
       isBetween: getBetween(value),
@@ -157,8 +142,9 @@ export const useCalendar = (props: IUseCalendarProps) => {
   );
 
   return months.map((baseDate) => {
+    const baseData = getMonthBaseData(baseDate);
     const currentDays: IDay[] = getMonthDays({
-      baseDate,
+      baseData,
       weekends,
       getActive,
       getBetween,
@@ -166,16 +152,17 @@ export const useCalendar = (props: IUseCalendarProps) => {
       week,
     });
 
-    const beforeStartDate = daysInMonth(
+    const beforeBaseData = getMonthBaseData(
       dayjs(baseDate)
         .set("M", baseDate.getMonth() - 1)
-        .month()
-    ) - currentDays[0].weekday + 2;
+        .toDate()
+    );
+
+    const beforeStartDate =
+      beforeBaseData.numberOfDays - currentDays[0].weekday + 2;
 
     const daysBefore: IDay[] = getMonthDays({
-      baseDate: dayjs(baseDate)
-        .set("M", baseDate.getMonth() - 1)
-        .toDate(),
+      baseData: beforeBaseData,
       weekends,
       startDate: beforeStartDate,
       external: true,
@@ -184,18 +171,23 @@ export const useCalendar = (props: IUseCalendarProps) => {
       week,
     });
 
+    const afterBaseData = getMonthBaseData(
+      dayjs(baseDate)
+        .set("M", baseDate.getMonth() + 1)
+        .toDate()
+    );
+
     const endWeekDay = 7 - currentDays[currentDays.length - 1].weekday;
     const additionalWeek = !trimWeeks && endWeekDay === 0 ? 7 : endWeekDay;
-    const afterEndDate = additionalWeek +
-    (currentDays.length + daysBefore.length + additionalWeek === 5 * 7 &&
-    !trimWeeks
-      ? 7
-      : 0)
+    const afterEndDate =
+      additionalWeek +
+      (currentDays.length + daysBefore.length + additionalWeek === 5 * 7 &&
+      !trimWeeks
+        ? 7
+        : 0);
 
     const daysAfter: IDay[] = getMonthDays({
-      baseDate: dayjs(baseDate)
-        .set("M", baseDate.getMonth() + 1)
-        .toDate(),
+      baseData: afterBaseData,
       weekends,
       endDate: afterEndDate,
       external: true,
