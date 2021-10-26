@@ -30,9 +30,7 @@ const monthDataCache: Record<string, IBaseMonthData> = {};
 
 const getDateKey = (d: dayjs.ConfigType) => dayjs(d).format("YYYY-MM-DD");
 
-const getNumberOfDays = (date: Date) => {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-};
+const getNumberOfDays = (date: Date) => dayjs(date).endOf('month').date();
 
 export const getMonthBaseData = (baseDate: Date): IBaseMonthData => {
   const key = getDateKey(baseDate);
@@ -55,3 +53,5 @@ export const getMonthBaseData = (baseDate: Date): IBaseMonthData => {
     return monthDataCache[key];
   }
 };
+
+export const sortDates = (dates: Date[]): Date[] => dates.sort((a, b) => a.getTime() - b.getTime())

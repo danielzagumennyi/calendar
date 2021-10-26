@@ -2,13 +2,14 @@ import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import styled from "styled-components";
 import { IDay, IMode, useCalendar } from "../hooks/useCalendar";
+import { sortDates } from "../utils/utils";
 import { Panel } from "./Panel";
 
 (window as any).dayjs = dayjs;
 
 const defaultWeekends = [0, 6];
 
-export type IRange = [] | [Date] | [Date, Date];
+export type IRange = Date[];
 
 export type IWeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -33,13 +34,22 @@ export type ICalendarProps = {
   minDate?: Date;
   maxDate?: Date;
   weekStartDay?: IWeekDay;
+  interactiveRange?: boolean;
 };
 
+export type IObjectRange = {
+  start?: Date;
+  end?: Date;
+};
+
+const objectRangeToArray = (r: IObjectRange): IRange => {
+  return Object.values(r).filter((d) => Boolean(d));
+};
 
 const getWeek = (start: IWeekDay) => {
-  const week: IWeekDay[] = [0,1,2,3,4,5,6];
+  const week: IWeekDay[] = [0, 1, 2, 3, 4, 5, 6];
   return week.slice(start).concat(week.slice(0, start));
-}
+};
 
 export const Calendar = (props: ICalendarProps) => {
   const {
@@ -60,11 +70,13 @@ export const Calendar = (props: ICalendarProps) => {
     onDatesChange,
     onRangeChange,
     weekStartDay = 0,
+    interactiveRange,
   } = props;
+  // console.log("🚀 ~ file: Calendar.tsx ~ line 52 ~ Calendar ~ range", range)
 
   const week = useMemo(() => {
-    return getWeek(weekStartDay)
-  }, [weekStartDay])
+    return getWeek(weekStartDay);
+  }, [weekStartDay]);
 
   const [startShowDate, setStartShowDate] = useState<Date>(
     date || dates[0] || range[0] || dayjs().date(1).toDate()
@@ -79,6 +91,8 @@ export const Calendar = (props: ICalendarProps) => {
       .map((_, index) => new Date(year, month + index, 1));
   }, [columns, rows, startShowDate]);
 
+  const [localRange, setLocalRange] = useState<IObjectRange>({});
+
   const monthsData = useCalendar({
     months,
     week,
@@ -86,7 +100,10 @@ export const Calendar = (props: ICalendarProps) => {
     mode,
     date,
     dates,
-    range,
+    range:
+      objectRangeToArray(localRange).length > 0
+        ? objectRangeToArray(localRange)
+        : range,
 
     weekends,
     trimWeeks,
@@ -128,17 +145,39 @@ export const Calendar = (props: ICalendarProps) => {
 
   const handleRangeChange = useCallback(
     (date: IDay) => {
-      if (range.length === 0 || range.length === 2) {
-        onRangeChange?.([date.value]);
+      if (interactiveRange) {
+        if (localRange.start && localRange.end) {
+          onRangeChange?.(sortDates(objectRangeToArray(localRange)));
+          setLocalRange({});
+        } else if (!localRange.start) {
+          setLocalRange({
+            start: date.value,
+          }); 
+        }
       } else {
-        const _dates = [...range, date.value];
-        _dates.sort((a, b) => a.getTime() - b.getTime());
+        if (range.length === 0 || range.length === 2) {
+          onRangeChange?.([date.value]);
+        } else {
+          const _dates = [...range, date.value];
+          _dates.sort((a, b) => a.getTime() - b.getTime());
 
-        onRangeChange?.(_dates.slice(0, 2) as IRange);
+          onRangeChange?.(_dates.slice(0, 2) as IRange);
+        }
       }
     },
-    [onRangeChange, range]
+    [interactiveRange, localRange, onRangeChange, range]
   );
+
+  const handleDateHover = useCallback((date: IDay) => {
+    setLocalRange((prev) => {
+      return prev.start
+        ? {
+            start: prev.start,
+            end: date.value,
+          }
+        : prev;
+    });
+  }, []);
 
   const handleDateClick = useCallback(
     (date: IDay) => {
@@ -161,6 +200,7 @@ export const Calendar = (props: ICalendarProps) => {
       {monthsData.map((props) => (
         <Panel
           onClick={handleDateClick}
+          onHover={handleDateHover}
           trimWeeks={trimWeeks}
           hideExternal={hideExternal}
           locale={locale}

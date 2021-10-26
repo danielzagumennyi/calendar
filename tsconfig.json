@@ -21,6 +21,8 @@
     "jsx": "react-jsx"
   },
   "include": [
-    "src"
+    "src",
+    "node_modules/dayjs/plugin/isSameOrBefore.d.ts",
+    "node_modules/dayjs/plugin/isSameOrAfter.d.ts"
   ]
 }

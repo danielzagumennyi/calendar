@@ -8,6 +8,7 @@ export type IPanelProps = {
   locale?: string;
   
   onClick?: (d: IDay) => void;
+  onHover?: (d: IDay) => void;
 
   hideExternal?: boolean;
   weekends?: number[];
@@ -20,6 +21,7 @@ export type IPanelProps = {
 
 export const Panel = ({
   onClick,
+  onHover,
   locale,
   active,
   before,
@@ -63,9 +65,8 @@ export const Panel = ({
             $current={day.isActive}
             $between={day.isBetween}
             $disabled={day.isDisabled}
-            onClick={() => {
-              onClick?.(day);
-            }}
+            onClick={() => onClick?.(day)}
+            onMouseEnter={() => onHover?.(day)}
           >
             {day.date}
           </Day>
@@ -126,7 +127,7 @@ const Day = styled.div<{
   ${(p) =>
     p.$weekend &&
     css`
-      color: grey;
+      color: tomato;
     `}
 
   ${(p) =>

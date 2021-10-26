@@ -1,6 +1,7 @@
-import React from "react";
+import dayjs from "dayjs";
+import React, { useState } from "react";
 import styled, { createGlobalStyle } from "styled-components";
-import { Calendar } from "./components/Calendar";
+import { Calendar, IRange } from "./components/Calendar";
 
 const Reset = createGlobalStyle`
   *, *::before, *::after {
@@ -23,38 +24,35 @@ function App() {
   //     .set("d", +10)
   //     .toDate(),
   // ]);
-  // const [range, setRange] = useState<IRange>([]);
+  const [range, setRange] = useState<IRange>([]);
 
   return (
     <Root>
       <Reset />
       <Calendar
-        // mode={"range"}
-        // range={range}
-        // onRangeChange={(r) => setRange(r)}
-        // rows={2}
-        // columns={4}
-        locale={"ru-ru"}
+        mode={"range"}
+        range={range}
+        onRangeChange={(r) => setRange(r)}
+        rows={2}
+        columns={4}
+        interactiveRange
         weekStartDay={1}
-        hideExternal
-        trimWeeks
-        // disabled={[
-        //   [
-        //     dayjs().toDate(),
-        //     dayjs()
-        //       .set("d", +10)
-        //       .toDate(),
-        //   ],
-        //   dayjs()
-        //     .set("d", +25)
-        //     .toDate(),
-        //   dayjs()
-        //     .set("d", +27)
-        //     .toDate(),
-        //   dayjs()
-        //     .set("d", +132)
-        //     .toDate(),
-        // ]}
+        // hideExternal
+        // trimWeeks
+        disabled={[
+          [
+            dayjs().toDate(),
+            dayjs().date(29).hour(0).toDate(),
+          ],
+          dayjs()
+            .toDate(),
+          // dayjs()
+          //   .set("d", +27)
+          //   .toDate(),
+          // dayjs()
+          //   .set("d", +132)
+          //   .toDate(),
+        ]}
         // maxDate={new Date()}
         // minDate={new Date()}
       />

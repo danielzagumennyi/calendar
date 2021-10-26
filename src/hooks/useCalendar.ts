@@ -1,7 +1,15 @@
 import dayjs, { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 import { IWeekDay } from "../components/Calendar";
-import { getMonthBaseData, IBaseDayData, IBaseMonthData } from "../utils/utils";
+import {
+  getMonthBaseData,
+  IBaseDayData,
+  IBaseMonthData,
+  sortDates,
+} from "../utils/utils";
+
+dayjs.extend(require("dayjs/plugin/isSameOrBefore"));
+dayjs.extend(require("dayjs/plugin/isSameOrAfter"));
 
 export type IMode = "date" | "range" | "multiple";
 
@@ -43,7 +51,7 @@ type IGetMonthDays = {
 };
 
 const isBetween = (d: Dayjs, range: Date[]): boolean => {
-  return d.isAfter(range?.[0], "date") && d.isBefore(range?.[1], "date");
+  return d.isSameOrAfter(range[0], "date") && d.isSameOrBefore(range[1], "date");
 };
 
 const getMonthDays = (props: IGetMonthDays): IDay[] => {
@@ -122,11 +130,17 @@ export const useCalendar = (props: IUseCalendarProps) => {
     [date, dates, mode, range]
   );
 
+  const sortedRange = useMemo(() => sortDates(range || []), [range]);
+
   const getBetween = useCallback(
     (d: Dayjs): boolean => {
-      return mode === "range" && range?.length === 2 && isBetween(d, range);
+      return (
+        mode === "range" &&
+        sortedRange.length === 2 &&
+        isBetween(d, sortedRange)
+      );
     },
-    [mode, range]
+    [mode, sortedRange]
   );
 
   const getDisabled = useCallback(
@@ -153,9 +167,7 @@ export const useCalendar = (props: IUseCalendarProps) => {
     });
 
     const beforeBaseData = getMonthBaseData(
-      dayjs(baseDate)
-        .set("M", baseDate.getMonth() - 1)
-        .toDate()
+      dayjs(baseDate).subtract(1, "M").toDate()
     );
 
     const beforeStartDate =
@@ -172,9 +184,7 @@ export const useCalendar = (props: IUseCalendarProps) => {
     });
 
     const afterBaseData = getMonthBaseData(
-      dayjs(baseDate)
-        .set("M", baseDate.getMonth() + 1)
-        .toDate()
+      dayjs(baseDate).add(1, "M").toDate()
     );
 
     const endWeekDay = 7 - currentDays[currentDays.length - 1].weekday;
